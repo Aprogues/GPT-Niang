@@ -69,7 +69,8 @@ test('oversized partial lines and malformed JSON cannot consume the next valid e
 }));
 test('scan stays within rollout folders and a callback failure does not stop other events',()=>fixture(root=>{
   fs.mkdirSync(path.join(root,'sessions'));fs.mkdirSync(path.join(root,'unrelated'));const file=path.join(root,'sessions','a.jsonl');append(file,header());fs.writeFileSync(path.join(root,'unrelated','secret.jsonl'),'');
-  assert.deepEqual(listRolloutFiles(root),[file]);let callbacks=0;const monitor=new CompletionMonitor({codexHome:root,since:stamp,onNotification:()=>{callbacks++;throw Error('consumer failed');}});
+  // macOS /var is a symlink to /private/var; listRolloutFiles returns real paths.
+  assert.deepEqual(listRolloutFiles(root),[fs.realpathSync(file)]);let callbacks=0;const monitor=new CompletionMonitor({codexHome:root,since:stamp,onNotification:()=>{callbacks++;throw Error('consumer failed');}});
   monitor.scan(true);append(file,event('one'));append(file,event('two'));monitor.scan();assert.equal(callbacks,2);
   assert.equal(defaultCodexHome({CODEX_HOME:root}),path.resolve(root));
 }));
