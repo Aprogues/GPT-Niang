@@ -187,8 +187,9 @@ function Invoke-WidgetReleaseNow {
     $audio.Timer.Stop();$audio.PendingRelease=$false;$audio.ReleasePlayed=$true
     if(!(Get-WidgetAudioEnabled) -or (Get-WidgetAudioVolume)-le 0 -or !$audio.Release){return}
     Set-WidgetAudioVolume
-    if($audio.Press){try{$audio.Press.Stop()}catch{}}
-    try{$audio.Release.Stop();$audio.Release.Play()}catch{}
+    # Do not Stop() the press player here: SoundPlayer.Stop() waits for the
+    # clip to finish and would freeze the UI thread on every click.
+    try{$audio.Release.Play()}catch{}
 }
 function Stop-WidgetAudio {
     $audio=$script:gptNiangAudio
@@ -214,8 +215,11 @@ function Close-WidgetAudio {
 function Play-WidgetPressSound {
     $audio=$script:gptNiangAudio
     if(!$audio){return}
-    Stop-WidgetAudio
-    if(!(Get-WidgetAudioEnabled) -or (Get-WidgetAudioVolume)-le 0 -or (!$audio.Press -and !$audio.Release)){return}
+    # SoundPlayer.Stop() blocks for up to the clip length (~0.1 s). Calling it on
+    # every mousedown froze the whole WPF UI during rapid clicks. Play() restarts
+    # the same player by itself, so only reset the scheduling state here.
+    $audio.Timer.Stop();$audio.PendingRelease=$false;$audio.PressEnded=$true;$audio.Clock.Reset()
+    if(!(Get-WidgetAudioEnabled) -or (Get-WidgetAudioVolume)-le 0 -or (!$audio.Press -and !$audio.Release)){$audio.Pressing=$false;return}
     $audio.Pressing=$true;$audio.PressEnded=(!$audio.Press);$audio.ReleasePlayed=$false;$audio.Clock.Restart()
     Set-WidgetAudioVolume
     if($audio.Press){try{$audio.Press.Play()}catch{$audio.PressEnded=$true}}
