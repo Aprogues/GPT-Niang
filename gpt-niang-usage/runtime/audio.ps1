@@ -50,7 +50,7 @@ public sealed class GptClickAudioQueue : IDisposable {
  private void Loop(){foreach(Action action in queue.GetConsumingEnumerable()){try{action();}catch{}}}
  private static void TryStop(SoundPlayer player){if(player==null)return;try{player.Stop();}catch{}}
  private static void TryPlay(SoundPlayer player){if(player==null)return;try{player.Play();}catch{}}
- public void Press(SoundPlayer press){queue.Add(()=>{TryStop(press);TryPlay(press);});}
+ public void Press(SoundPlayer press,SoundPlayer release){queue.Add(()=>{TryStop(press);TryStop(release);TryPlay(press);});}
  public void Release(SoundPlayer press,SoundPlayer release){queue.Add(()=>{TryStop(press);TryStop(release);TryPlay(release);});}
  public void Stop(SoundPlayer press,SoundPlayer release){queue.Add(()=>{TryStop(press);TryStop(release);});}
  public void Dispose(){try{queue.CompleteAdding();}catch{}}
@@ -243,7 +243,7 @@ function Play-WidgetPressSound {
     Set-WidgetAudioVolume
     # Enqueue only: the worker repeats the original Stop-then-Play sequence that
     # produced the clean click, so the UI thread never waits for the clip.
-    if($audio.Press -and $audio.Queue){try{$audio.Queue.Press($audio.Press)}catch{$audio.PressEnded=$true}}
+    if($audio.Press -and $audio.Queue){try{$audio.Queue.Press($audio.Press,$audio.Release)}catch{$audio.PressEnded=$true}}
 }
 function Play-WidgetReleaseSound {
     $audio=$script:gptNiangAudio
