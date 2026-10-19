@@ -74,7 +74,7 @@ final class FollowPlacementTests: XCTestCase {
         XCTAssertNil(WidgetPlacement.followFrame(host: valid, size: size, x: .nan, y: 0))
         XCTAssertNil(WidgetPlacement.followFrame(host: valid, size: size, x: 0, y: .infinity))
         XCTAssertNil(WidgetPlacement.followFrame(host: valid, size: .zero, x: 0, y: 0))
-        XCTAssertNil(WidgetPlacement.followFrame(host: valid, size: CGSize(width: .infinity, height: 378), x: 0, y: 0))
+        XCTAssertNil(WidgetPlacement.followFrame(host: valid, size: CGSize(width: CGFloat.infinity, height: 378), x: 0, y: 0))
     }
 
     func testNormalHostRetainsExistingNormalizedPlacement() throws {
