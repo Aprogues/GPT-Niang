@@ -2,9 +2,9 @@
 
 让一只白发紫瞳的小龙娘，陪你看 Codex 的剩余额度。
 
-**Windows / macOS 桌面挂件 · 自动识别套餐与额度窗口 · 中文语录 · Windows 当前正式版 1.3.5（macOS 最新 1.3.4）**
+**Windows / macOS 桌面挂件 · 自动识别套餐与额度窗口 · 中文语录 · 当前正式版 1.3.5**
 
-1.3.5 本次仅发布 Windows 安装包：新增音乐律动、本地角色图库、WAV 音效导入、回答结束提醒与自动语录，并包含本轮的稳定性修复与回归。macOS 版仍为 1.3.4，macOS 包待构建与实机验证后单独发布；1.3.5 中的 macOS 代码改动已随源码保留。
+1.3.5 同时发布 Windows 与 macOS 安装包：Windows 新增音乐律动、本地角色图库、自动语录，人物与气泡可分别缩放；双平台新增 WAV 音效导入与回答结束提醒；macOS 同步窗口跟随／边缘裁切、后台交接与更新就绪回退。两端功能差异见[下文](#windows-与-macos-功能差异135)。
 
 [**下载最新版**](https://github.com/T7moris/GPT-Niang/releases/latest) · [Windows 安装](#windows-安装) · [macOS 安装](#macos-安装) · [更新记录](更新记录.md) · [反馈问题](https://github.com/T7moris/GPT-Niang/issues/new)
 
@@ -36,6 +36,24 @@
 | Business | 个人额度优先，另显示最短时间窗口；其余窗口在详情中保留；个人额度不是公司总余额 |
 
 Mac 设置使用 SwiftUI，菜单、窗口与拖动使用 AppKit；没有运行 PowerShell、WPF 或 Windows 更新器。界面可选择跟随系统、简体中文或繁体中文，切换语言不会改写自定义语录。安装／登录启动入口、Windows MCP 插件和 Mac 聊天速度面板保持各平台现有支持范围。
+### Windows 与 macOS 功能差异（1.3.5）
+
+两个平台共享额度解析和自定义语录，但本版新增功能并非全部同时提供：
+
+| 功能 | Windows 1.3.5 | macOS 1.3.5 |
+| --- | --- | --- |
+| 音乐律动 | ✅ 新增 | ❌ 本版未包含 |
+| 本地角色图库（导入／移除／撤销） | ✅ 新增 | ❌ 本版未包含 |
+| 人物与气泡分别缩放 | ✅ 新增 | ❌ 仅支持整体大小 |
+| 自动语录（1/5/15 分钟） | ✅ 新增 | ❌ 本版未包含 |
+| WAV 音效导入（按下／松开） | ✅ | ✅ 同步新增 |
+| 回答结束提醒 | ✅ | ✅ 同步新增 |
+| 窗口跟随／边缘裁切／后台交接 | ✅ 原生 follower + 遮挡恢复 | ✅ 轮询 follower，实现不同、无 DWM cloak |
+| 聊天速度面板 | ❌ | ✅ macOS 独有 |
+| 界面语言（跟随系统／简中／繁中） | ❌ | ✅ macOS 独有 |
+| DPI、遮挡恢复、长刷新内存修复 | ✅ Windows 专项 | — 无对应实现 |
+
+**未同步与待验证：** macOS 包由 CI 构建，尚未在实机验证多屏、Stage Manager、全屏 Space、音频导入和更新回退；macOS 更新就绪会额外要求配额 worker 心跳，Node 在非默认路径时可能触发回退，建议先在非关键环境验证。Windows 的音乐律动、图库、自动语录、独立缩放本版没有移植到 macOS；macOS 的聊天速度面板和界面语言也没有加入 Windows。
 
 ## 套餐适配与自动检测
 
@@ -63,14 +81,12 @@ node /Applications/GPTNiangMac.app/Contents/Resources/Backend/runtime/detect-pla
 
 在 [Release 下载页](https://github.com/T7moris/GPT-Niang/releases/latest) 的 **Assets** 中选择自己的系统：
 
-**v1.3.5 本次仅提供 Windows 安装包**；macOS 最新仍为 v1.3.4，待 macOS 包构建与验证后单独发布。
-
-| 系统 | 安装包 | 安装入口 |
+| 系统 | v1.3.5 安装包 | 安装入口 |
 | --- | --- | --- |
-| Windows 10 / 11（v1.3.5，本次发布） | [gpt-niang-usage-widget-v1.3.5-windows.zip](https://github.com/T7moris/GPT-Niang/releases/download/v1.3.5/gpt-niang-usage-widget-v1.3.5-windows.zip) | 解压后运行 `安装GPT娘.cmd` |
-| macOS 13+，Apple Silicon / Intel（v1.3.4） | [gpt-niang-usage-widget-v1.3.4-macos-universal.zip](https://github.com/T7moris/GPT-Niang/releases/download/v1.3.4/gpt-niang-usage-widget-v1.3.4-macos-universal.zip) | 解压后打开 `GPTNiangMac.app` |
+| Windows 10 / 11 | [gpt-niang-usage-widget-v1.3.5-windows.zip](https://github.com/T7moris/GPT-Niang/releases/download/v1.3.5/gpt-niang-usage-widget-v1.3.5-windows.zip) | 解压后运行 `安装GPT娘.cmd` |
+| macOS 13+，Apple Silicon / Intel | [gpt-niang-usage-widget-v1.3.5-macos-universal.zip](https://github.com/T7moris/GPT-Niang/releases/download/v1.3.5/gpt-niang-usage-widget-v1.3.5-macos-universal.zip) | 解压后打开 `GPTNiangMac.app` |
 
-GitHub 自动附带的 **Source code** 和 **Code → Download ZIP** 是源码，不是上述安装包。Mac 下载包内已包含通用应用，不需要 Swift 或 Xcode；Intel 和较旧 macOS 的实际界面表现仍需真机验证。尚无 Linux 版本。v1.3.5 源码同时包含 macOS 改动，但未随本版本发布 macOS 安装包。
+GitHub 自动附带的 **Source code** 和 **Code → Download ZIP** 是源码，不是上述安装包。Mac 下载包内已包含通用应用，不需要 Swift 或 Xcode；Intel 和较旧 macOS 的实际界面表现仍需真机验证。尚无 Linux 版本。两个平台的功能差异见[上文](#windows-与-macos-功能差异135)。
 
 ### Windows 安装
 
@@ -82,7 +98,7 @@ GitHub 自动附带的 **Source code** 和 **Code → Download ZIP** 是源码�
 
 ### macOS 安装
 
-1. 下载 **v1.3.4** Mac ZIP（v1.3.5 本次未发布 macOS 包），解压后把 **`GPTNiangMac.app`** 移入「应用程序」或其他准备长期保留的位置。
+1. 下载 **v1.3.5** Mac ZIP，解压后把 **`GPTNiangMac.app`** 移入「应用程序」或其他准备长期保留的位置。
 2. 打开应用，再打开 Codex 主窗口。Mac 不使用 `.cmd` 或 PowerShell 安装器。
 3. 右键角色打开原生菜单，从「设置」进入原生设置窗口，也可从悬停按钮或菜单栏进入。双击和连续点击角色与 Windows 一样执行普通点击，不再打开设置。需要登录启动时，再开启 **「登入 Mac 時自動開啟」**；系统可能要求在「登录项」中批准。
 4. 在菜单栏选择 **「聊天速度…」**，可打开独立的本地速度面板。
@@ -93,7 +109,7 @@ Mac 的位置跟随目标为 60 Hz，仍使用轮询，不能保证拖动时零�
 
 ### 安装包校验（建议）
 
-[Windows v1.3.5 Release](https://github.com/T7moris/GPT-Niang/releases/tag/v1.3.5) 的 **[SHA256SUMS.txt](https://github.com/T7moris/GPT-Niang/releases/download/v1.3.5/SHA256SUMS.txt)** 包含 Windows 包校验值；macOS v1.3.4 的校验值见其 [Release](https://github.com/T7moris/GPT-Niang/releases/tag/v1.3.4)。下载后计算自己的安装包哈希，与文件中**同名文件**的一行比较。
+同一 [v1.3.5 Release](https://github.com/T7moris/GPT-Niang/releases/tag/v1.3.5) 的 **[SHA256SUMS.txt](https://github.com/T7moris/GPT-Niang/releases/download/v1.3.5/SHA256SUMS.txt)** 包含 Windows 与 macOS 两个包的校验值。下载后计算自己的安装包哈希，与文件中**同名文件**的一行比较。
 
 Windows，在 PowerShell 中运行：
 
@@ -104,7 +120,7 @@ Get-FileHash .\gpt-niang-usage-widget-v1.3.5-windows.zip -Algorithm SHA256
 macOS，在终端中进入下载目录后运行：
 
 ```sh
-shasum -a 256 gpt-niang-usage-widget-v1.3.4-macos-universal.zip
+shasum -a 256 gpt-niang-usage-widget-v1.3.5-macos-universal.zip
 ```
 
 十六进制字母大小写不影响比较。哈希不一致说明下载文件与 Release 校验值不一致，可能是下载损坏或内容被改动，请不要安装。请只从本仓库的 Release 页面下载；第三方加速镜像不能当作可信来源。
@@ -255,7 +271,7 @@ swift test --package-path macos
 codesign --verify --deep --strict dist/GPTNiangMac.app
 ```
 
-打包与发布流程见 `.github/workflows/release.yml`。正常发布会在两个平台测试、构建与校验都通过后发布同一个 Release 和两个独立安装包；v1.3.5 为 Windows 单平台发布，macOS 包待后续单独发布。
+打包与发布流程见 `.github/workflows/release.yml`。两个平台测试、构建与校验都通过后，发布同一个 Release 和两个独立安装包；v1.3.5 由 Windows 本地构建 + macOS CI 构建组成，两端功能差异见[上文](#windows-与-macos-功能差异135)。
 
 Windows 界面使用 PowerShell / WPF，Mac 界面使用 SwiftUI / AppKit，额度查询使用共享 Node.js 后端。窗口识别与接口依赖当前 Codex 桌面端实现，后续客户端更新可能需要适配。实际拖动、多窗口切换及 Intel / 较旧 macOS 的界面行为仍需真机验证，CI 通过不等于完成所有桌面交互测试。
 
