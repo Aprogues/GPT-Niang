@@ -121,28 +121,17 @@ function Get-WidgetCustomAudioPath($Audio,[string]$Slot) {
     if(!$entry -or !$Audio.DataDir){return $null}
     return Join-Path (Join-Path $Audio.DataDir 'sounds') $entry.file
 }
-function Get-WidgetAudioVoices($Audio,[string]$Slot) {
-    # Voices are independent SoundPlayer instances so fast repeated clicks can
-    # overlap instead of stopping and restarting one player mid-sound.
-    $voices=@($Audio[$Slot+'Voices']);$streams=@($Audio[$Slot+'Streams'])
-    if($voices.Count-eq 0 -and $Audio[$Slot]){$voices=@($Audio[$Slot]);$streams=@($Audio[$Slot+'Stream'])}
-    return [pscustomobject]@{Players=$voices;Streams=$streams}
-}
 function Close-WidgetAudioState($Audio) {
     if(!$Audio){return}
     $Audio.Timer.Stop()
-    foreach($slot in @('press','release')){
-        $voices=Get-WidgetAudioVoices $Audio $slot
-        for($i=0;$i-lt $voices.Players.Count;$i++){Close-WidgetSoundPlayer $voices.Players[$i] ($voices.Streams[$i])}
-        $Audio[$slot]=$null;$Audio[$slot+'Stream']=$null;$Audio[$slot+'Voices']=@();$Audio[$slot+'Streams']=@()
-    }
+    Close-WidgetSoundPlayer $Audio.Press $Audio.PressStream
+    Close-WidgetSoundPlayer $Audio.Release $Audio.ReleaseStream
     if($Audio.Preview){Close-WidgetSoundPlayer $Audio.Preview.Player $Audio.Preview.Stream}
 }
 function New-WidgetAudioState([string]$AppDir,[string]$DataDir,$Preferences) {
     $timer=[Windows.Threading.DispatcherTimer]::new()
     $audio=@{AppDir=$AppDir;DataDir=$DataDir;Preferences=$Preferences;Errors=@{}
         Press=$null;PressStream=$null;Release=$null;ReleaseStream=$null;PressPath=$null;ReleasePath=$null
-        PressVoices=@();ReleaseVoices=@();PressStreams=@();ReleaseStreams=@();PressNext=0;ReleaseNext=0
         Preview=$null;Volume=(Get-WidgetAudioVolume);Timer=$timer;Clock=[Diagnostics.Stopwatch]::new()
         Duration=0.0;Pressing=$false;PressEnded=$true;PendingRelease=$false;ReleasePlayed=$true}
     try{
@@ -153,16 +142,7 @@ function New-WidgetAudioState([string]$AppDir,[string]$DataDir,$Preferences) {
             try{
                 $duration=Get-WidgetWaveSeconds $source
                 $loaded=New-WidgetScaledSoundPlayer $source $audio.Volume
-                $voices=@($loaded.Player);$streams=@($loaded.Stream)
-                # Two spare press voices cover several clicks per second; the
-                # release clip gets one spare so overlapping pairs also finish.
-                $extra=if($slot-eq 'press'){2}else{1}
-                for($i=0;$i-lt $extra;$i++){
-                    $more=New-WidgetScaledSoundPlayer $source $audio.Volume
-                    $voices+=$more.Player;$streams+=$more.Stream
-                }
-                $audio[$slot]=$voices[0];$audio[$slot+'Stream']=$streams[0]
-                $audio[$slot+'Voices']=$voices;$audio[$slot+'Streams']=$streams
+                $audio[$slot]=$loaded.Player;$audio[$slot+'Stream']=$loaded.Stream
                 if($slot-eq 'press'){$audio.Duration=$duration}
             }catch{
                 if($Preferences.mode-eq 'builtin'){throw}
@@ -187,27 +167,17 @@ function Set-WidgetAudioVolume {
     if($Volume-ge 0 -and ![double]::IsNaN($Volume) -and ![double]::IsInfinity($Volume)){$script:soundVolume=[Math]::Min(1.0,[Math]::Max(0.0,$Volume))}
     $value=Get-WidgetAudioVolume;$audio=$script:gptNiangAudio
     if(!$audio -or [Math]::Abs($audio.Volume-$value)-lt 0.000001){return}
-    $rebuilt=@{}
+    $players=@{}
     try{
+        foreach($slot in @('press','release')){if($audio[$slot]){$players[$slot]=New-WidgetScaledSoundPlayer $audio[$slot+'Path'] $value}}
         foreach($slot in @('press','release')){
-            $source=$audio[$slot+'Path'];if(!$source){continue}
-            $old=Get-WidgetAudioVoices $audio $slot
-            $count=[Math]::Max(1,$old.Players.Count)
-            $voices=@();$streams=@()
-            for($i=0;$i-lt $count;$i++){
-                $loaded=New-WidgetScaledSoundPlayer $source $value
-                $voices+=$loaded.Player;$streams+=$loaded.Stream
-            }
-            $rebuilt[$slot]=@{Voices=$voices;Streams=$streams}
-            for($i=0;$i-lt $old.Players.Count;$i++){Close-WidgetSoundPlayer $old.Players[$i] ($old.Streams[$i])}
-        }
-        foreach($slot in $rebuilt.Keys){
-            $audio[$slot+'Voices']=$rebuilt[$slot].Voices;$audio[$slot+'Streams']=$rebuilt[$slot].Streams
-            $audio[$slot]=$rebuilt[$slot].Voices[0];$audio[$slot+'Stream']=$rebuilt[$slot].Streams[0]
+            if(!$players[$slot]){continue}
+            Close-WidgetSoundPlayer $audio[$slot] $audio[$slot+'Stream']
+            $audio[$slot]=$players[$slot].Player;$audio[$slot+'Stream']=$players[$slot].Stream
         }
         $audio.Volume=$value
     }catch{
-        foreach($entry in $rebuilt.Values){for($i=0;$i-lt $entry.Voices.Count;$i++){Close-WidgetSoundPlayer $entry.Voices[$i] $entry.Streams[$i]}}
+        foreach($player in $players.Values){Close-WidgetSoundPlayer $player.Player $player.Stream}
         $script:soundVolume=$audio.Volume
     }
 }
@@ -217,21 +187,15 @@ function Invoke-WidgetReleaseNow {
     $audio.Timer.Stop();$audio.PendingRelease=$false;$audio.ReleasePlayed=$true
     if(!(Get-WidgetAudioEnabled) -or (Get-WidgetAudioVolume)-le 0 -or !$audio.Release){return}
     Set-WidgetAudioVolume
-    $voices=Get-WidgetAudioVoices $audio 'release'
-    if($voices.Players.Count){
-        $index=[int]$audio.ReleaseNext % $voices.Players.Count
-        $audio.ReleaseNext=($index+1)%$voices.Players.Count
-        try{$voices.Players[$index].Play()}catch{}
-    }
+    if($audio.Press){try{$audio.Press.Stop()}catch{}}
+    try{$audio.Release.Stop();$audio.Release.Play()}catch{}
 }
 function Stop-WidgetAudio {
     $audio=$script:gptNiangAudio
     if(!$audio){return}
     $audio.Timer.Stop();$audio.PendingRelease=$false;$audio.ReleasePlayed=$true;$audio.Pressing=$false;$audio.PressEnded=$true;$audio.Clock.Reset()
-    foreach($slot in @('press','release')){
-        $voices=Get-WidgetAudioVoices $audio $slot
-        foreach($player in $voices.Players){if($player){try{$player.Stop()}catch{}}}
-    }
+    if($audio.Press){try{$audio.Press.Stop()}catch{}}
+    if($audio.Release){try{$audio.Release.Stop()}catch{}}
     if($audio.Preview){Close-WidgetSoundPlayer $audio.Preview.Player $audio.Preview.Stream;$audio.Preview=$null}
 }
 function Initialize-WidgetAudio {
@@ -250,19 +214,11 @@ function Close-WidgetAudio {
 function Play-WidgetPressSound {
     $audio=$script:gptNiangAudio
     if(!$audio){return}
-    # Cancel a pending release from the previous click, but let sounds that are
-    # already playing finish: rapid clicks use separate voices, so a 130 ms clip
-    # is no longer stopped and restarted on every mousedown.
-    $audio.Timer.Stop();$audio.PendingRelease=$false;$audio.ReleasePlayed=$true
-    if(!(Get-WidgetAudioEnabled) -or (Get-WidgetAudioVolume)-le 0 -or (!$audio.Press -and !$audio.Release)){$audio.Pressing=$false;$audio.PressEnded=$true;return}
+    Stop-WidgetAudio
+    if(!(Get-WidgetAudioEnabled) -or (Get-WidgetAudioVolume)-le 0 -or (!$audio.Press -and !$audio.Release)){return}
     $audio.Pressing=$true;$audio.PressEnded=(!$audio.Press);$audio.ReleasePlayed=$false;$audio.Clock.Restart()
     Set-WidgetAudioVolume
-    $voices=Get-WidgetAudioVoices $audio 'press'
-    if($voices.Players.Count){
-        $index=[int]$audio.PressNext % $voices.Players.Count
-        $audio.PressNext=($index+1)%$voices.Players.Count
-        try{$voices.Players[$index].Play()}catch{$audio.PressEnded=$true}
-    }
+    if($audio.Press){try{$audio.Press.Play()}catch{$audio.PressEnded=$true}}
 }
 function Play-WidgetReleaseSound {
     $audio=$script:gptNiangAudio
