@@ -37,6 +37,27 @@ public static class GptNiangPcm {
 }
 '@
 }
+if(!('GptClickAudioQueue' -as [type])){
+    Add-Type -TypeDefinition @'
+using System;
+using System.Media;
+using System.Collections.Concurrent;
+using System.Threading;
+public sealed class GptClickAudioQueue : IDisposable {
+ private readonly BlockingCollection<Action> queue=new BlockingCollection<Action>();
+ private readonly Thread worker;
+ public GptClickAudioQueue(){worker=new Thread(Loop);worker.IsBackground=true;worker.Name="gpt-click-audio";worker.Start();}
+ private void Loop(){foreach(Action action in queue.GetConsumingEnumerable()){try{action();}catch{}}}
+ private static void TryStop(SoundPlayer player){if(player==null)return;try{player.Stop();}catch{}}
+ private static void TryPlay(SoundPlayer player){if(player==null)return;try{player.Play();}catch{}}
+ public void Press(SoundPlayer press){queue.Add(()=>{TryStop(press);TryPlay(press);});}
+ public void Release(SoundPlayer press,SoundPlayer release){queue.Add(()=>{TryStop(press);TryStop(release);TryPlay(release);});}
+ public void Stop(SoundPlayer press,SoundPlayer release){queue.Add(()=>{TryStop(press);TryStop(release);});}
+ public void Dispose(){try{queue.CompleteAdding();}catch{}}
+ public void Wait(int milliseconds){try{worker.Join(milliseconds);}catch{}}
+}
+'@
+}
 function Read-WidgetPcmWave([string]$Path) {
     $file=[IO.File]::OpenRead($Path)
     try{
@@ -124,6 +145,7 @@ function Get-WidgetCustomAudioPath($Audio,[string]$Slot) {
 function Close-WidgetAudioState($Audio) {
     if(!$Audio){return}
     $Audio.Timer.Stop()
+    if($Audio.Queue){try{$Audio.Queue.Stop($Audio.Press,$Audio.Release)}catch{};try{$Audio.Queue.Dispose();$Audio.Queue.Wait(500)}catch{}}
     Close-WidgetSoundPlayer $Audio.Press $Audio.PressStream
     Close-WidgetSoundPlayer $Audio.Release $Audio.ReleaseStream
     if($Audio.Preview){Close-WidgetSoundPlayer $Audio.Preview.Player $Audio.Preview.Stream}
@@ -133,7 +155,7 @@ function New-WidgetAudioState([string]$AppDir,[string]$DataDir,$Preferences) {
     $audio=@{AppDir=$AppDir;DataDir=$DataDir;Preferences=$Preferences;Errors=@{}
         Press=$null;PressStream=$null;Release=$null;ReleaseStream=$null;PressPath=$null;ReleasePath=$null
         Preview=$null;Volume=(Get-WidgetAudioVolume);Timer=$timer;Clock=[Diagnostics.Stopwatch]::new()
-        ReleaseClock=[Diagnostics.Stopwatch]::new();ReleaseDuration=0.0
+        Queue=[GptClickAudioQueue]::new()
         Duration=0.0;Pressing=$false;PressEnded=$true;PendingRelease=$false;ReleasePlayed=$true}
     try{
         foreach($slot in @('press','release')){
@@ -144,7 +166,7 @@ function New-WidgetAudioState([string]$AppDir,[string]$DataDir,$Preferences) {
                 $duration=Get-WidgetWaveSeconds $source
                 $loaded=New-WidgetScaledSoundPlayer $source $audio.Volume
                 $audio[$slot]=$loaded.Player;$audio[$slot+'Stream']=$loaded.Stream
-                if($slot-eq 'press'){$audio.Duration=$duration}else{$audio.ReleaseDuration=$duration}
+                if($slot-eq 'press'){$audio.Duration=$duration}
             }catch{
                 if($Preferences.mode-eq 'builtin'){throw}
                 $audio.Errors[$slot]='文件不可用，请重新选择。'
@@ -188,17 +210,15 @@ function Invoke-WidgetReleaseNow {
     $audio.Timer.Stop();$audio.PendingRelease=$false;$audio.ReleasePlayed=$true
     if(!(Get-WidgetAudioEnabled) -or (Get-WidgetAudioVolume)-le 0 -or !$audio.Release){return}
     Set-WidgetAudioVolume
-    # Never restart a clip that is still audible: the waveform discontinuity is
-    # what produced the click/pop. Wait for the previous release to finish.
-    if($audio.ReleaseClock.IsRunning -and $audio.ReleaseClock.Elapsed.TotalSeconds-lt ($audio.ReleaseDuration-0.02)){return}
-    try{$audio.Release.Play();$audio.ReleaseClock.Restart()}catch{}
+    # Playback runs on a dedicated worker thread: SoundPlayer.Stop() waits for
+    # the clip to finish, and doing that on the UI thread froze the widget.
+    if($audio.Queue){try{$audio.Queue.Release($audio.Press,$audio.Release)}catch{}}
 }
 function Stop-WidgetAudio {
     $audio=$script:gptNiangAudio
     if(!$audio){return}
-    $audio.Timer.Stop();$audio.PendingRelease=$false;$audio.ReleasePlayed=$true;$audio.Pressing=$false;$audio.PressEnded=$true;$audio.Clock.Reset();$audio.ReleaseClock.Reset()
-    if($audio.Press){try{$audio.Press.Stop()}catch{}}
-    if($audio.Release){try{$audio.Release.Stop()}catch{}}
+    $audio.Timer.Stop();$audio.PendingRelease=$false;$audio.ReleasePlayed=$true;$audio.Pressing=$false;$audio.PressEnded=$true;$audio.Clock.Reset()
+    if($audio.Queue){try{$audio.Queue.Stop($audio.Press,$audio.Release)}catch{}}
     if($audio.Preview){Close-WidgetSoundPlayer $audio.Preview.Player $audio.Preview.Stream;$audio.Preview=$null}
 }
 function Initialize-WidgetAudio {
@@ -217,15 +237,13 @@ function Close-WidgetAudio {
 function Play-WidgetPressSound {
     $audio=$script:gptNiangAudio
     if(!$audio){return}
-    # Restarting a clip that is still audible hard-cuts the waveform (pop), and
-    # mixing it with the release clip can clip. Keep one clean clip at a time.
-    $pressAudible=($audio.Press -and $audio.Pressing -and !$audio.PressEnded -and $audio.Clock.IsRunning -and $audio.Clock.Elapsed.TotalSeconds-lt ($audio.Duration-0.02))
-    $releaseAudible=($audio.ReleaseClock.IsRunning -and $audio.ReleaseClock.Elapsed.TotalSeconds-lt ($audio.ReleaseDuration-0.02))
     $audio.Timer.Stop();$audio.PendingRelease=$false;$audio.PressEnded=$true;$audio.Clock.Reset()
     if(!(Get-WidgetAudioEnabled) -or (Get-WidgetAudioVolume)-le 0 -or (!$audio.Press -and !$audio.Release)){$audio.Pressing=$false;return}
     $audio.Pressing=$true;$audio.PressEnded=(!$audio.Press);$audio.ReleasePlayed=$false;$audio.Clock.Restart()
     Set-WidgetAudioVolume
-    if($audio.Press -and !$pressAudible -and !$releaseAudible){try{$audio.Press.Play()}catch{$audio.PressEnded=$true}}
+    # Enqueue only: the worker repeats the original Stop-then-Play sequence that
+    # produced the clean click, so the UI thread never waits for the clip.
+    if($audio.Press -and $audio.Queue){try{$audio.Queue.Press($audio.Press)}catch{$audio.PressEnded=$true}}
 }
 function Play-WidgetReleaseSound {
     $audio=$script:gptNiangAudio
