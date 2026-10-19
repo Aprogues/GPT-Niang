@@ -1,6 +1,6 @@
 # GPT-Niang（GPT 娘）macOS
 
-Current release: **1.3.4**. Chinese installation and platform comparison: [project README](../README.md#macos-安装).
+Current macOS release: **1.3.4**. The v1.3.5 release is Windows-only and does not include a macOS package. Chinese installation and platform comparison: [project README](../README.md#macos-安装).
 
 Code contributions, reviews, bug reproductions and feature suggestions are credited with their PR/Issue links in the [complete contributor acknowledgements](../README.md#致谢与许可).
 
@@ -23,7 +23,7 @@ If a CommandLineTools-only source build reports a missing SwiftUI macro plugin, 
 
 ## Install the release
 
-Download `gpt-niang-usage-widget-v1.3.4-macos-universal.zip` from the [GitHub Release](https://github.com/T7moris/GPT-Niang/releases/latest), verify its entry in `SHA256SUMS.txt`, unzip, and move `GPTNiangMac.app` to Applications before opening. Node.js 20+ and a signed-in Codex desktop app are required; Swift/Xcode is needed only for source builds.
+Download `gpt-niang-usage-widget-v1.3.4-macos-universal.zip` from the [v1.3.4 GitHub Release](https://github.com/T7moris/GPT-Niang/releases/tag/v1.3.4), verify its entry in `SHA256SUMS.txt`, unzip, and move `GPTNiangMac.app` to Applications before opening. Node.js 20+ and a signed-in Codex desktop app are required; Swift/Xcode is needed only for source builds.
 
 The release is ad-hoc signed, not Developer ID signed or notarized. If macOS blocks the first launch, after checking the source and checksum follow [Apple’s instructions](https://support.apple.com/102445) in System Settings → Privacy & Security → Open Anyway.
 
