@@ -1,4 +1,4 @@
-﻿param([string]$PreviewDirectory,[string]$TestRoot=$PSScriptRoot)
+param([string]$PreviewDirectory,[string]$TestRoot=$PSScriptRoot)
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase
 $appDir=Split-Path $TestRoot -Parent

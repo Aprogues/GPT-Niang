@@ -31,7 +31,7 @@
       <Canvas.RenderTransform><ScaleTransform ScaleX="1" ScaleY="1"/></Canvas.RenderTransform>
       <Path x:Name="BubbleShape" Fill="#FFFFFF" Stroke="#745A98" StrokeThickness="4"
             StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-            Data="M 283,85 A 128,79 0 1 0 27,85 A 128,79 0 0 0 114,160 A 20,10 0 0 0 149,164 A 128,79 0 0 0 283,85 Z"/>
+            Data="M 27,85 A 128,79 0 1 1 283,85 A 128,79 0 0 1 196,160 A 20,10 0 0 1 161,164 A 128,79 0 0 1 27,85 Z"/>
       <Grid x:Name="SceneText" Canvas.Left="47" Canvas.Top="18" Width="216" Height="118" RenderTransformOrigin="0.5,0.5">
         <Grid.RenderTransform><ScaleTransform x:Name="TextFacingScale"/></Grid.RenderTransform>
       <Canvas x:Name="QuotaText" Width="216" Height="118" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -91,7 +91,7 @@
     <Ellipse x:Name="TailNear" Canvas.Left="142" Canvas.Top="214" Width="17" Height="12" Fill="#FFFFFF" Stroke="#745A98" StrokeThickness="4" RenderTransformOrigin="0.5,0.5">
       <Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
     </Ellipse>
-    <Image x:Name="Girl" Canvas.Left="142" Canvas.Top="142" Width="208" Height="208" Stretch="UniformToFill" Cursor="Hand" RenderOptions.BitmapScalingMode="HighQuality"
+    <Image x:Name="Girl" Canvas.Left="142" Canvas.Top="142" Width="208" Height="208" Stretch="Uniform" Cursor="Hand" RenderOptions.BitmapScalingMode="HighQuality"
            ToolTip="点角色看额度；点气泡看语录，再点收起；拖动调整位置；右键设置"/>
     <Button x:Name="MenuButton" Canvas.Left="320" Canvas.Top="162" Width="24" Height="24"
             FontSize="15" Opacity="0" IsHitTestVisible="False" Background="#EDE7F6" ToolTip="挂件设置">
