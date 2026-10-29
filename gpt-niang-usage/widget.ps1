@@ -675,6 +675,8 @@ function Get-QuotaWindowLabel($Window,[string]$Fallback){
 function Get-QuotaRows {
   # Reuse two visual rows and keep the original timed-window placement.
   $windows=@($script:status.windows|Where-Object{$null-ne $_}|Sort-Object minutes)
+  # Select-Object -First 1 repeatedly adds type names to cached objects in Windows PowerShell 5.1.
+  # Index filtered arrays instead to keep recurring refreshes from growing the type cache.
   $individual=@($windows|Where-Object{$_.kind-eq 'individual'})[0]
   if($individual){
     $timed=@($windows|Where-Object{$_.kind-ne 'individual'}|Sort-Object minutes)[0]
